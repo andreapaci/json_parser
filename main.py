@@ -6,6 +6,7 @@ indent_char = '  '
 container_char_dict = '$'
 container_char_list = '#'
 
+#TODO: Testare bene la funzione modify by path e find by pattern
 
 # Recursive function
 # Returns True are set in order to prematurely exit the function once it has modified what it has to.
@@ -15,10 +16,7 @@ def json_modify_by_index(data, index, new_val=None, lst=None):
         lst = [0]
     if isinstance(data, dict):
         for (k, v) in data.items():
-            if isinstance(v, dict):
-                if json_modify_by_index(v, index, new_val=new_val , lst=lst):
-                    return True
-            elif isinstance(v, list):
+            if isinstance(v, dict) or isinstance(v, list):
                 if json_modify_by_index(v, index, new_val=new_val , lst=lst):
                     return True
             else:
@@ -28,10 +26,7 @@ def json_modify_by_index(data, index, new_val=None, lst=None):
                 lst[0] = lst[0] + 1
     elif isinstance(data, list):
         for i in range(0, len(data)):
-            if isinstance(data[i], dict):
-                if json_modify_by_index(data[i], index, new_val=new_val , lst=lst):
-                    return True
-            elif isinstance(data[i], list):
+            if isinstance(data[i], dict) or isinstance(data[i], list):
                 if json_modify_by_index(data[i], index, new_val=new_val , lst=lst):
                     return True
             else:
@@ -43,20 +38,50 @@ def json_modify_by_index(data, index, new_val=None, lst=None):
         raise Exception("Json decoding went wrong!")
     return False
 
-def json_modify_by_path(data, path):
+def json_modify_by_path(data, path, new_val, index=None):
     if path == "":
-        return data
+        data[index] = new_val
+        return
     dict_pos = path.find(container_char_dict)
     list_pos = path.find(container_char_list)
-    print(dict_pos, list_pos)
-    if list_pos < 0 or dict_pos < list_pos:
+    if (dict_pos > 0 and list_pos > 0 and dict_pos < list_pos) or (list_pos < 0 and dict_pos > 0):
         tokens = path.split(container_char_dict, 1)
-        return json_modify_by_path(data[tokens[0]], tokens[1])
-    if dict_pos < 0 or list_pos < dict_pos:
+        if index is None:
+            return json_modify_by_path(data, tokens[1], new_val, index=tokens[0])
+        else:
+            return json_modify_by_path(data[index], tokens[1], new_val, index=tokens[0])
+    if (list_pos > 0 and dict_pos > 0 and list_pos < dict_pos) or (dict_pos < 0 and list_pos > 0):
         tokens = path.split(container_char_list, 1)
-        return json_modify_by_path(data[int(tokens[0])], tokens[1])
-    print("Bella")
+        if index is None:
+            return json_modify_by_path(data, tokens[1], new_val, index=int(tokens[0]))
+        else:
+            return json_modify_by_path(data[index], tokens[1], new_val, index=int(tokens[0]))
     raise Exception("Path accessing went wrong")
+
+def json_find_by_pattern(data, pattern, path=""):
+    if isinstance(data, dict):
+        for (k, v) in data.items():
+            new_path = path + k + container_char_dict
+            if isinstance(v, dict) or isinstance(v, list):
+                ret = json_find_by_pattern(v, pattern, path=new_path)
+                if ret is not None:
+                    return ret
+            else:
+                if pattern.lower() in new_path.lower():
+                    return new_path
+    elif isinstance(data, list):
+        for i in range(0, len(data)):
+            new_path = path + str(i) + container_char_list
+            if isinstance(data[i], dict) or isinstance(data[i], list):
+                ret = json_find_by_pattern(data[i], pattern, path=new_path)
+                if ret is not None:
+                    return ret
+            else:
+                if pattern.lower() in new_path.lower():
+                    return new_path
+    else:
+        raise Exception("Json decoding went wrong!")
+
 
 def json_parse(data, indent=0, lst=None, path=""):
     if lst is None:
@@ -75,11 +100,11 @@ def json_parse(data, indent=0, lst=None, path=""):
                 print(indent_char * indent, "],", sep='')
             else:
                 if isinstance(v, str):
-                    #print("\"" + str(v) + "\",", "(" + str(lst[0]) + ")", new_path)
-                    print("\"" + str(v) + "\",")
+                    print("\"" + str(v) + "\",", "(" + str(lst[0]) + ")", new_path)
+                    #print("\"" + str(v) + "\",")
                 else:
-                    #print(str(v) + ",", "(" + str(lst[0]) + ")", new_path)
-                    print(str(v) + ",")
+                    print(str(v) + ",", "(" + str(lst[0]) + ")", new_path)
+                    #print(str(v) + ",")
                 lst[0] = lst[0] + 1
     elif isinstance(data, list):
         for i in range(0, len(data)):
@@ -94,11 +119,11 @@ def json_parse(data, indent=0, lst=None, path=""):
                 print(indent_char * indent, "],", sep='')
             else:
                 if isinstance(data[i], str):
-                    #print(indent_char * indent + "\"" + str(data[i]) + "\",", "(" + str(lst[0]) + ")", new_path)
-                    print(indent_char * indent + "\"" + str(data[i]) + "\",")
+                    print(indent_char * indent + "\"" + str(data[i]) + "\",", "(" + str(lst[0]) + ")", new_path)
+                    #print(indent_char * indent + "\"" + str(data[i]) + "\",")
                 else:
-                    #print(indent_char * indent + str(data[i]) + ",", "(" + str(lst[0]) + ")", new_path)
-                    print(indent_char * indent + str(data[i]) + ",")
+                    print(indent_char * indent + str(data[i]) + ",", "(" + str(lst[0]) + ")", new_path)
+                    #print(indent_char * indent + str(data[i]) + ",")
                 lst[0] = lst[0] + 1
     else:
         raise Exception("Json decoding went wrong!")
@@ -113,8 +138,10 @@ if __name__ == '__main__':
     #print(json_modify_by_path(data, "popup$menuitem$1#value$2#onclick$"))
     #print(json_modify_by_path(data, "id$"))
     #print(json_modify_by_path(data, "popup$menuitem$0#value$"))
+    json_modify_by_path(data, json_find_by_pattern(data, "addreSS$2#oncliCk$1"), "orcamado")
 
-    #for i in range(0,12):
-        #print("----------------------")
-        #json_modify_by_index(data, i, new_val=1)
-        #json_parse(data)
+    json_parse(data)
+#    for i in range(0,26):
+#        print("----------------------")
+#        json_modify_by_index(data, i, new_val=1)
+#        json_parse(data)
