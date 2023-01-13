@@ -236,6 +236,8 @@ if __name__ == '__main__':
     assert not json_key_find(data, ["address", "caccapupu"])
     assert json_key_find(data, [])
 
+    assert isinstance(json_access_by_path(data, "popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$"), list)
+
     print("------------------------------------------------------------")
     json_parse(data)
     print("------------------------------------------------------------")
