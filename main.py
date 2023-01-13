@@ -1,7 +1,7 @@
 import json
 import re
 
-jsonString = '{"id": "file","value": "File","popup":{"menuitem": { "address":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": {"id": "file","value": "File","popup":{"menuitem": { "address":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": "Close", "onclick": "CloseDoc()"}], "onclick": "OpenDoc()"},{"value": "Close", "onclick": [1,"2",3,4,{"value": "New", "onclick": "CreateNewDoc()"}]}]}}}}]}]}}}'
+jsonString = '{"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": {"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": "Close", "onclick": "CloseDoc()"}], "onclick": "OpenDoc()"},{"value": "Close", "onclick": [1,"2",3,4,{"value": "New", "onclick": "CreateNewDoc()"}]}]}}}}]}]}}}'
 indent_char = '  '
 container_char_dict = '$'
 container_char_list = '#'
@@ -128,6 +128,39 @@ def json_find_by_pattern(data, pattern, path=""):
     return None
 
 
+def search_elem_in_keys(e, keys, lst):
+    for i in range(0, len(keys)):
+        if keys[i] == e.lower():
+            lst[i] = True
+    res = True
+    for v in lst:
+        res = res and v
+    return res
+
+# Recursive function: This function returns True if all the keys specified in "keys" are found in data, False otherwise
+def json_key_find(data, keys, lst=None):
+    if lst is None:
+        lst = [False] * len(keys)
+        keys = [e.lower() for e in keys]
+
+    if isinstance(data, dict):
+        for (k, v) in data.items():
+            if search_elem_in_keys(k, keys, lst):
+                return True
+            if isinstance(v, dict) or isinstance(v, list):
+                if json_key_find(v, keys, lst=lst):
+                    return True
+    elif isinstance(data, list):
+        for i in range(0, len(data)):
+            if isinstance(data[i], dict) or isinstance(data[i], list):
+                if json_key_find(data[i], keys, lst=lst):
+                    return True
+    else:
+        raise Exception("Json decoding went wrong!")
+    return False
+
+
+
 def json_parse(data, indent=0, lst=None, path=""):
     if lst is None:
         lst = [0]
@@ -197,6 +230,10 @@ if __name__ == '__main__':
         assert e[1] == json_access_by_path(data, json_find_by_pattern(data, e[0]))
 
     assert json_find_by_pattern(data, "xxxxxxxxxxxxxxx") is None
+
+    assert json_key_find(data, ["address", "id"])
+    assert json_key_find(data, ["adDress", "MENUITEM"])
+    assert not json_key_find(data, ["address", "caccapupu"])
 
     print("------------------------------------------------------------")
     json_parse(data)
