@@ -234,6 +234,7 @@ if __name__ == '__main__':
     assert json_key_find(data, ["address", "id"])
     assert json_key_find(data, ["adDress", "MENUITEM"])
     assert not json_key_find(data, ["address", "caccapupu"])
+    assert json_key_find(data, [])
 
     print("------------------------------------------------------------")
     json_parse(data)
