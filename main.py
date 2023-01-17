@@ -267,6 +267,29 @@ def json_key_exists(data, keys: list[jk.Json_Key]):
             return False
     return True
 
+#                                                   #
+#   External functions - Use this functions only    #
+#                                                   #
+
+
+def json_key_keyval_exists(data, keys_val: list[jkv.Json_Key_Val] = None, keys: list[jk.Json_Key] = None):
+    """
+    json_key_keyval_exists is a function that searches in a json data if key-value pair are found and keys
+    (without specifying its value) are present
+
+    :param data: json data struct
+    :param keys_val: list of key-value pairs
+    :param keys: list of keys
+    :return: True if all key-value pairs and keys are found, False otherwise
+    """
+    if keys_val is not None:
+        if not json_key_value_compare(data, keys_val):
+            return False
+    if keys is not None:
+        if not json_key_exists(data, keys):
+            return False
+    return True
+
 
 def json_parse(data, print_index: bool = False, print_path: bool = False, indent: int = 0, lst: list[int] = None, path: str = ""):
     """
@@ -336,6 +359,9 @@ def test():
 
     data = json.loads(jsonString)
 
+    # ---------------------------------------------------------------------
+    # Test json_parse with index and path enabled/disabled
+
     print("------------------------------------------------------------")
     json_parse(data)
     json_parse(data, print_index=True)
@@ -343,12 +369,18 @@ def test():
     json_parse(data, print_index=True, print_path=True)
     print("------------------------------------------------------------")
 
+    # ---------------------------------------------------------------------
+    # Test json_modify/access_by_index
+
     for i in range(0, 18, 2):
         assert json_modify_by_index(data, i, i)
         assert i == json_access_by_index(data, i)
 
     assert not json_modify_by_index(data, 120, 120)
     assert json_access_by_index(data, 120) is None
+
+    # ---------------------------------------------------------------------
+    # Test josn_modify/access_by_path and json_find_pattern
 
     pattern_val = [["addreSS$2#oncliCk$1", "A"], ["address$1#onclick$", "B"], ["id", 1],
                    ["$menuitem$address$2#onclick$0#", 1337]]
@@ -361,6 +393,12 @@ def test():
 
     assert json_find_by_pattern(data, "xxxxxxxxxxxxxxx") is None
 
+    assert isinstance(json_access_by_path(data, "popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$"), list)
+
+
+    # ---------------------------------------------------------------------
+    # Test json_key_find
+
     assert json_key_find(data, ["address", "id"])
     assert json_key_find(data, ["adDress", "MENUITEM"])
     assert json_key_find(data, ["id", "ID"])
@@ -368,8 +406,8 @@ def test():
     assert not json_key_find(data, ["notexisting"])
     assert json_key_find(data, [])
 
-    assert isinstance(
-        json_access_by_path(data, "popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$"), list)
+    # ---------------------------------------------------------------------
+    # Test json_key_value_compare
 
     key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 ["A", "12", 1337]),
@@ -407,6 +445,9 @@ def test():
 
     assert not json_key_value_compare(data, key_val)
 
+    # ---------------------------------------------------------------------
+    # Test json_key_exists
+
     key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
            jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
            jk.Json_Key("id", True)]
@@ -430,6 +471,82 @@ def test():
            jk.Json_Key("popup$menuitem$ADDRESS$0#", False)]
 
     assert json_key_exists(data, key)
+
+    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           jk.Json_Key("adadadada", False)]
+
+    assert not json_key_exists(data, key)
+
+    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           jk.Json_Key("adadadada", True)]
+
+    assert not json_key_exists(data, key)
+
+    # ---------------------------------------------------------------------
+    # Test json_key_keyval_exists
+
+    assert json_key_keyval_exists(data)
+
+    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           jk.Json_Key("id", False)]
+
+    assert not json_key_keyval_exists(data, keys=key)
+
+    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
+           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           jk.Json_Key("id", True)]
+
+    assert json_key_keyval_exists(data, keys=key)
+
+    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+                                [1, 1, "A", 1337]),
+               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+
+    assert json_key_keyval_exists(data, keys_val=key_val)
+
+    key_val = [jkv.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
+               jkv.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
+               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+
+    assert not json_key_keyval_exists(data, keys_val=key_val)
+
+    key_val = [jkv.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
+               jkv.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
+               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+
+    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
+           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           jk.Json_Key("id", True)]
+
+    assert not json_key_keyval_exists(data, keys_val=key_val, keys=key)
+
+    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+                                [1, 1, "A", 1337]),
+               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+
+    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           jk.Json_Key("id", False)]
+
+    assert not json_key_keyval_exists(data, keys_val=key_val, keys=key)
+
+    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+                                [1, 1, "A", 1337]),
+               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+
+    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           jk.Json_Key("id", True)]
+
+    assert json_key_keyval_exists(data, keys_val=key_val, keys=key)
+
+
 
     print("------------------------------------------------------------")
     json_parse(data)
