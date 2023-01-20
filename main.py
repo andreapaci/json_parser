@@ -3,6 +3,7 @@ import json_key_val as jkv
 import json_key as jk
 
 jsonString = '{"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": {"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": "Close", "onclick": "CloseDoc()"}], "onclick": "OpenDoc()"},{"value": "Close", "onclick": [1,"2",3,4,{"value": "New", "onclick": "CreateNewDoc()"}]}]}}}}]}]}}}'
+jsonString2 = '{"glossary": {"title": "example glossary","GlossDiv": {"title": "S","GlossList": {"GlossEntry": {"ID": "SGML","SortAs": "SGML","GlossTerm": "Standard Generalized Markup Language","Acronym": "SGML","Abbrev": "ISO 8879:1986","GlossDef": {"para": "A meta-markup language, used to create markup languages such as DocBook.","GlossSeeAlso": ["GML", "XML"]},"GlossSee": "markup"}}}}}'
 indent_char = '  '
 container_char_dict = '$'
 container_char_list = '#'
@@ -220,9 +221,9 @@ def json_key_find(data, keys: list[str], lst: list[bool] = None):
     return False
 
 
-def json_key_value_compare(data, key_value: list[jkv.Json_Key_Val]):
+def json_key_value_exists(data, key_value: list[jkv.Json_Key_Val]):
     """
-    json_key_value_compare check if all the key-values pair in key_value are present in data.
+    json_key_value_exists check if all the key-values pair in key_value are present in data.
 
     :param data: json data struct
     :param key_value: List made by Json_Key_Value entries.
@@ -245,6 +246,33 @@ def json_key_value_compare(data, key_value: list[jkv.Json_Key_Val]):
     return True
 
 
+def json_key_value_exists_delete(data, key_value: list[jkv.Json_Key_Val]):
+    """
+    json_key_value_exists_delete it is like json_key_value_exists, bit it deletes keys when are found.
+
+    :param data: json data struct
+    :param key_value: List made by Json_Key_Value entries.
+    """
+    # For each element of the key values...
+    dump = list[jkv.Json_Key_Val]()
+    for kv in key_value:
+        key = kv.key
+        if kv.is_pattern:
+            key = json_find_by_pattern(data, kv.key)
+            if key is None:
+                continue
+        val = json_access_by_path(data, key)
+        res = False
+
+        for v in kv.val:
+            res = res or val == v
+        if res:
+            dump.append(kv)
+
+    for d in dump:
+        key_value.remove(d)
+
+
 def json_key_exists(data, keys: list[jk.Json_Key]):
     """
     json_key_exists checks if keys specified in "keys" exits.
@@ -259,6 +287,8 @@ def json_key_exists(data, keys: list[jk.Json_Key]):
             ret = json_find_by_pattern(data, k.key)
             if ret is None:
                 return False
+            # TODO: Questo si potrebbe levare (se find_pattern ha restituito una chiave,
+            #  questa è sicuramente accessibile)
             full_keys.append(ret)
         else:
             full_keys.append(k.key)
@@ -266,6 +296,29 @@ def json_key_exists(data, keys: list[jk.Json_Key]):
         if not json_access_by_path(data, e):
             return False
     return True
+
+
+def json_key_exists_delete(data, keys: list[jk.Json_Key]):
+    """
+    json_key_exists_delete is the same as json_key_exists, but it deletes entry in keys when are found
+
+    :param data: json data struct
+    :param keys: list of Json_Keys
+    """
+    dump = list[jk.Json_Key]()
+    for k in keys:
+        if k.is_pattern:
+            ret = json_find_by_pattern(data, k.key)
+            if ret is None:
+                continue
+            if json_access_by_path(data, ret):
+                dump.append(k)
+        else:
+            if json_access_by_path(data, k.key):
+                dump.append(k)
+
+    for d in dump:
+        keys.remove(d)
 
 #                                                   #
 #   External functions - Use this functions only    #
@@ -283,10 +336,34 @@ def json_key_keyval_exists(data, keys_val: list[jkv.Json_Key_Val] = None, keys: 
     :return: True if all key-value pairs and keys are found, False otherwise
     """
     if keys_val is not None:
-        if not json_key_value_compare(data, keys_val):
+        if not json_key_value_exists(data, keys_val):
             return False
     if keys is not None:
         if not json_key_exists(data, keys):
+            return False
+    return True
+
+
+def json_multiple_key_keyval_exists(data: list, keys_val: list[jkv.Json_Key_Val] = None, keys: list[jk.Json_Key] = None):
+    """
+    json_key_keyval_exists is a function that searches in a json data if key-value pair are found and keys
+    (without specifying its value) are present for multiple data
+
+    :param data: list of json data struct
+    :param keys_val: list of key-value pairs
+    :param keys: list of keys
+    :return: True if all key-value pairs and keys are found, False otherwise
+    """
+    if keys_val is not None:
+        for d in data:
+            json_key_value_exists_delete(d, keys_val)
+        if len(keys_val) > 0:
+            return False
+
+    if keys is not None:
+        for d in data:
+            json_key_exists_delete(d, keys)
+        if len(keys) > 0:
             return False
     return True
 
@@ -358,6 +435,7 @@ def test():
     """
 
     data = json.loads(jsonString)
+    data2 = json.loads(jsonString2)
 
     # ---------------------------------------------------------------------
     # Test json_parse with index and path enabled/disabled
@@ -367,6 +445,11 @@ def test():
     json_parse(data, print_index=True)
     json_parse(data, print_path=True)
     json_parse(data, print_index=True, print_path=True)
+
+    json_parse(data2)
+    json_parse(data2, print_index=True)
+    json_parse(data2, print_path=True)
+    json_parse(data2, print_index=True, print_path=True)
     print("------------------------------------------------------------")
 
     # ---------------------------------------------------------------------
@@ -379,6 +462,13 @@ def test():
     assert not json_modify_by_index(data, 120, 120)
     assert json_access_by_index(data, 120) is None
 
+    for i in range(0, 12, 2):
+        assert json_modify_by_index(data2, i, i)
+        assert i == json_access_by_index(data2, i)
+
+    assert not json_modify_by_index(data2, 120, 120)
+    assert json_access_by_index(data2, 120) is None
+
     # ---------------------------------------------------------------------
     # Test josn_modify/access_by_path and json_find_pattern
 
@@ -388,10 +478,21 @@ def test():
         json_modify_by_path(data, json_find_by_pattern(data, e[0]), e[1])
         assert e[1] == json_access_by_path(data, json_find_by_pattern(data, e[0]))
 
+    pattern_val = [["title", "A"], ["ENTRY$glosss", "B"], ["$SORTAS", 1],
+                   ["also$1#", 1337]]
+    for e in pattern_val:
+        json_modify_by_path(data2, json_find_by_pattern(data2, e[0]), e[1])
+        assert e[1] == json_access_by_path(data2, json_find_by_pattern(data2, e[0]))
+
     assert json_access_by_path(data, "xxxxxxxxx") is None
     assert not json_modify_by_path(data, "xxxxxxxxx", "1")
 
     assert json_find_by_pattern(data, "xxxxxxxxxxxxxxx") is None
+
+    assert json_access_by_path(data2, "xxxxxxxxx") is None
+    assert not json_modify_by_path(data2, "xxxxxxxxx", "1")
+
+    assert json_find_by_pattern(data2, "xxxxxxxxxxxxxxx") is None
 
     assert isinstance(json_access_by_path(data, "popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$"), list)
 
@@ -406,6 +507,13 @@ def test():
     assert not json_key_find(data, ["notexisting"])
     assert json_key_find(data, [])
 
+    assert json_key_find(data2, ["ABBREV", "id"])
+    assert json_key_find(data2, ["aCROnYM", "abbrev"])
+    assert json_key_find(data2, ["id", "ID"])
+    assert not json_key_find(data2, ["para", "notexisting"])
+    assert not json_key_find(data2, ["notexisting"])
+    assert json_key_find(data2, [])
+
     # ---------------------------------------------------------------------
     # Test json_key_value_compare
 
@@ -415,7 +523,7 @@ def test():
                                 ["A", 4, 1337]),
                jkv.Json_Key_Val("id", True, ["cane", "example", "12", 1])]
 
-    assert json_key_value_compare(data, key_val)
+    assert json_key_value_exists(data, key_val)
 
     key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 ["A", 1337, "12"]),
@@ -423,27 +531,27 @@ def test():
                                 ["A", 87878, 3, 1337]),
                jkv.Json_Key_Val("id", True, ["cane", "example", "12", "file"])]
 
-    assert not json_key_value_compare(data, key_val)
+    assert not json_key_value_exists(data, key_val)
 
     key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 [1, 1, "A", 1337]),
                jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
                jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
-    assert json_key_value_compare(data, key_val)
+    assert json_key_value_exists(data, key_val)
 
     key_val = [jkv.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
                jkv.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
                jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
-    assert not json_key_value_compare(data, key_val)
+    assert not json_key_value_exists(data, key_val)
 
     key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 [1, 1, "A", 1337]),
                jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
                jkv.Json_Key_Val("id", False, ["cane", "example", 1, "file"])]
 
-    assert not json_key_value_compare(data, key_val)
+    assert not json_key_value_exists(data, key_val)
 
     # ---------------------------------------------------------------------
     # Test json_key_exists
@@ -546,10 +654,49 @@ def test():
 
     assert json_key_keyval_exists(data, keys_val=key_val, keys=key)
 
+    # ---------------------------------------------------------------------
+    # Test json_key_value_exists_delete
 
+    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+                                [1, "lol", "no", "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 77]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+
+    json_key_value_exists_delete(data2, key_val)
+
+    assert len(key_val) == 1
+
+    key_val = [jkv.Json_Key_Val("notexisting", True,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", False, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("notexisting", True, [1, "lol", "no", 1337, 2])]
+
+    json_key_value_exists_delete(data2, key_val)
+
+    assert len(key_val) == 3
+
+    key_val = [jkv.Json_Key_Val("aaaaaaaaaaa", False,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+
+    json_key_value_exists_delete(data2, key_val)
+
+    assert len(key_val) == 1
+
+    # ---------------------------------------------------------------------
+    # Test json_key_exists_delete
+
+
+
+    # ---------------------------------------------------------------------
+    # Test json_multiple_key_keyval_exists
 
     print("------------------------------------------------------------")
     json_parse(data)
+    json_parse(data2)
     print("------------------------------------------------------------")
 
 
