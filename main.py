@@ -807,8 +807,8 @@ def test():
                jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
                jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
-    assert len(keys) > 0 and len(key_val) > 0
     assert json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
+    assert len(keys) > 0 and len(key_val) > 0
 
     keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
             jk.Json_Key("also$1#", True),
