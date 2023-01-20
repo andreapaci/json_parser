@@ -346,7 +346,7 @@ def json_key_keyval_exists(data, keys_val: list[jkv.Json_Key_Val] = None, keys: 
 
 def json_multiple_key_keyval_exists(data: list, keys_val: list[jkv.Json_Key_Val] = None, keys: list[jk.Json_Key] = None):
     """
-    json_key_keyval_exists is a function that searches in a json data if key-value pair are found and keys
+    json_multiple_key_keyval_exists is a function that searches in multiple json data if key-value pair are found and keys
     (without specifying its value) are present for multiple data
 
     :param data: list of json data struct
@@ -355,15 +355,17 @@ def json_multiple_key_keyval_exists(data: list, keys_val: list[jkv.Json_Key_Val]
     :return: True if all key-value pairs and keys are found, False otherwise
     """
     if keys_val is not None:
+        cp_keys_val = keys_val.copy()
         for d in data:
-            json_key_value_exists_delete(d, keys_val)
-        if len(keys_val) > 0:
+            json_key_value_exists_delete(d, cp_keys_val)
+        if len(cp_keys_val) > 0:
             return False
 
     if keys is not None:
+        cp_keys = keys.copy()
         for d in data:
-            json_key_exists_delete(d, keys)
-        if len(keys) > 0:
+            json_key_exists_delete(d, cp_keys)
+        if len(cp_keys) > 0:
             return False
     return True
 
@@ -711,6 +713,142 @@ def test():
 
     # ---------------------------------------------------------------------
     # Test json_multiple_key_keyval_exists
+
+    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+
+    assert json_multiple_key_keyval_exists([data2], keys_val=key_val)
+
+
+    key_val = [jkv.Json_Key_Val("notexisting", True,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", False, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("notexisting", True, [1, "lol", "no", 1337, 2])]
+
+    assert not json_multiple_key_keyval_exists([data2], keys_val=key_val)
+
+
+
+    key_val = [jkv.Json_Key_Val("aaaaaaaaaaa", False,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+
+    assert not json_multiple_key_keyval_exists([data2], keys_val=key_val)
+
+
+    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
+            jk.Json_Key("also$1#", True)]
+
+    assert json_multiple_key_keyval_exists([data2], keys=keys)
+
+    keys = [jk.Json_Key("notexisting", True), jk.Json_Key("id", False), jk.Json_Key("notexisting", True)]
+
+    assert not json_multiple_key_keyval_exists([data2], keys=keys)
+
+    keys = [jk.Json_Key("aaaaaaaaaaa", False), jk.Json_Key("id", True), jk.Json_Key("also$1#", True)]
+
+    assert not json_multiple_key_keyval_exists([data2], keys=keys)
+
+
+    keys = [jk.Json_Key("aaaaaaaaaaa", False), jk.Json_Key("id", True), jk.Json_Key("also$1#", True)]
+
+    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+
+    assert not json_multiple_key_keyval_exists([data2], keys=keys, keys_val=key_val)
+
+    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
+            jk.Json_Key("also$1#", True)]
+
+    key_val = [jkv.Json_Key_Val("aaaaaaaaaaa", False,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+
+    assert not json_multiple_key_keyval_exists([data2], keys=keys, keys_val=key_val)
+
+    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
+            jk.Json_Key("also$1#", True)]
+
+    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+
+    assert json_multiple_key_keyval_exists([data2], keys=keys, keys_val=key_val)
+
+
+    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
+            jk.Json_Key("also$1#", True),
+
+            jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+            jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+            jk.Json_Key("popup$menuitem$ADDRESS$0#", False)]
+
+    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
+
+               jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+                                [1, 1, "A", 1337]),
+               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+
+    assert len(keys) > 0 and len(key_val) > 0
+    assert json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
+
+    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
+            jk.Json_Key("also$1#", True),
+
+            jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+            jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+            jk.Json_Key("popup$meaaaaaa", False)]
+
+    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
+
+               jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+                                [1, 1, "A", 1337]),
+               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+
+    assert not json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
+
+    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
+            jk.Json_Key("also$1#", True),
+
+            jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+            jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+            jk.Json_Key("popup$menuitem$ADDRESS$0#", False)]
+
+    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+                                [1, "lol", "no",
+                                 "A meta-markup language, used to create markup languages such as DocBook."]),
+               jkv.Json_Key_Val("id", True, [2, "lol", "no", "id", 3333]),
+               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
+
+               jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+                                [1, 1, "A", 1337]),
+               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 66666]),
+               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+
+    assert not json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
 
     print("------------------------------------------------------------")
     json_parse(data)
