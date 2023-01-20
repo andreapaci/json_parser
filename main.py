@@ -689,6 +689,24 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_key_exists_delete
 
+    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
+            jk.Json_Key("also$1#", True)]
+
+    json_key_exists_delete(data2, keys)
+
+    assert len(keys) == 0
+
+    keys = [jk.Json_Key("notexisting", True), jk.Json_Key("id", False), jk.Json_Key("notexisting", True)]
+
+    json_key_exists_delete(data2, keys)
+
+    assert len(keys) == 3
+
+    keys = [jk.Json_Key("aaaaaaaaaaa", False), jk.Json_Key("id", True), jk.Json_Key("also$1#", True)]
+
+    json_key_exists_delete(data2, keys)
+
+    assert len(keys) == 1
 
 
     # ---------------------------------------------------------------------
