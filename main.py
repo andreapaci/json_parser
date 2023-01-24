@@ -1,12 +1,19 @@
 import json
-import json_key_val as jkv
-import json_key as jk
+import json_struct as js
 
 jsonString = '{"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": {"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": "Close", "onclick": "CloseDoc()"}], "onclick": "OpenDoc()"},{"value": "Close", "onclick": [1,"2",3,4,{"value": "New", "onclick": "CreateNewDoc()"}]}]}}}}]}]}}}'
 jsonString2 = '{"glossary": {"title": "example glossary","GlossDiv": {"title": "S","GlossList": {"GlossEntry": {"ID": "SGML","SortAs": "SGML","GlossTerm": "Standard Generalized Markup Language","Acronym": "SGML","Abbrev": "ISO 8879:1986","GlossDef": {"para": "A meta-markup language, used to create markup languages such as DocBook.","GlossSeeAlso": ["GML", "XML"]},"GlossSee": "markup"}}}}}'
 indent_char = '  '
 container_char_dict = '$'
 container_char_list = '#'
+
+
+def eval_expression(old_val, new_val):
+    val = old_val
+    loc_ = {"val": val}
+    exec("val = " + str(new_val), globals(), loc_)
+    val = loc_["val"]
+    return val
 
 
 def json_modify_by_index(data, index: int, new_val, lst: list[int] = None):
@@ -26,7 +33,7 @@ def json_modify_by_index(data, index: int, new_val, lst: list[int] = None):
                     return True
             else:
                 if index == lst[0]:
-                    data[k] = new_val
+                    data[k] = eval_expression(data[k], new_val)
                     return True
                 lst[0] = lst[0] + 1
     elif isinstance(data, list):
@@ -36,7 +43,7 @@ def json_modify_by_index(data, index: int, new_val, lst: list[int] = None):
                     return True
             else:
                 if index == lst[0]:
-                    data[i] = new_val
+                    data[i] = eval_expression(data[i], new_val)
                     return True
                 lst[0] = lst[0] + 1
     else:
@@ -88,8 +95,10 @@ def json_modify_by_path(data, path: str, new_val, index=None):
     :param new_val: value to be written
     :return: True if the value has been accessed and written, False otherwise
     """
+    if path is None:
+        return False
     if path == "":
-        data[index] = new_val
+        data[index] = eval_expression(data[index], new_val)
         return True
     dict_pos = path.find(container_char_dict)
     list_pos = path.find(container_char_list)
@@ -124,6 +133,8 @@ def json_access_by_path(data, path: str):
     :param path: the path specified as: key1$key2$list_index1#key3$list_index2#
     :return: the value accessed if found, None otherwise
     """
+    if path is None:
+        return None
     if path == "":
         return data
     dict_pos = path.find(container_char_dict)
@@ -221,7 +232,7 @@ def json_key_find(data, keys: list[str], lst: list[bool] = None):
     return False
 
 
-def json_key_value_exists(data, key_value: list[jkv.Json_Key_Val]):
+def json_key_value_exists(data, key_value: list[js.Json_Key_Val]):
     """
     json_key_value_exists check if all the key-values pair in key_value are present in data.
 
@@ -246,7 +257,7 @@ def json_key_value_exists(data, key_value: list[jkv.Json_Key_Val]):
     return True
 
 
-def json_key_value_exists_delete(data, key_value: list[jkv.Json_Key_Val]):
+def json_key_value_exists_delete(data, key_value: list[js.Json_Key_Val]):
     """
     json_key_value_exists_delete it is like json_key_value_exists, bit it deletes keys when are found.
 
@@ -254,7 +265,7 @@ def json_key_value_exists_delete(data, key_value: list[jkv.Json_Key_Val]):
     :param key_value: List made by Json_Key_Value entries.
     """
     # For each element of the key values...
-    dump = list[jkv.Json_Key_Val]()
+    dump = list[js.Json_Key_Val]()
     for kv in key_value:
         key = kv.key
         if kv.is_pattern:
@@ -273,7 +284,7 @@ def json_key_value_exists_delete(data, key_value: list[jkv.Json_Key_Val]):
         key_value.remove(d)
 
 
-def json_key_exists(data, keys: list[jk.Json_Key]):
+def json_key_exists(data, keys: list[js.Json_Key]):
     """
     json_key_exists checks if keys specified in "keys" exits.
 
@@ -298,14 +309,14 @@ def json_key_exists(data, keys: list[jk.Json_Key]):
     return True
 
 
-def json_key_exists_delete(data, keys: list[jk.Json_Key]):
+def json_key_exists_delete(data, keys: list[js.Json_Key]):
     """
     json_key_exists_delete is the same as json_key_exists, but it deletes entry in keys when are found
 
     :param data: json data struct
     :param keys: list of Json_Keys
     """
-    dump = list[jk.Json_Key]()
+    dump = list[js.Json_Key]()
     for k in keys:
         if k.is_pattern:
             ret = json_find_by_pattern(data, k.key)
@@ -325,7 +336,7 @@ def json_key_exists_delete(data, keys: list[jk.Json_Key]):
 #                                                   #
 
 
-def json_key_keyval_exists(data, keys_val: list[jkv.Json_Key_Val] = None, keys: list[jk.Json_Key] = None):
+def json_key_keyval_exists(data, keys_val: list[js.Json_Key_Val] = None, keys: list[js.Json_Key] = None):
     """
     json_key_keyval_exists is a function that searches in a json data if key-value pair are found and keys
     (without specifying its value) are present
@@ -344,7 +355,7 @@ def json_key_keyval_exists(data, keys_val: list[jkv.Json_Key_Val] = None, keys: 
     return True
 
 
-def json_multiple_key_keyval_exists(data: list, keys_val: list[jkv.Json_Key_Val] = None, keys: list[jk.Json_Key] = None):
+def json_multiple_key_keyval_exists(data: list, keys_val: list[js.Json_Key_Val] = None, keys: list[js.Json_Key] = None):
     """
     json_multiple_key_keyval_exists is a function that searches in multiple json data if key-value pair are found and keys
     (without specifying its value) are present for multiple data
@@ -368,6 +379,23 @@ def json_multiple_key_keyval_exists(data: list, keys_val: list[jkv.Json_Key_Val]
         if len(cp_keys) > 0:
             return False
     return True
+
+
+def json_inject_value(data, inject: js.Json_Write):
+    """
+    json_inject_value write the values specified in js.Json_Write in data
+
+    :param data: json data struct
+    :param inject: new value to be written
+    :return: True if value has been written, False otherwise
+    """
+    if inject.use_path:
+        path = json_find_by_pattern(data, inject.path)
+        if path is None:
+            return False
+        return json_modify_by_path(data, path, inject.new_val)
+    else:
+        return json_modify_by_index(data, inject.index, inject.new_val)
 
 
 def json_parse(data, print_index: bool = False, print_path: bool = False, indent: int = 0, lst: list[int] = None, path: str = ""):
@@ -474,17 +502,17 @@ def test():
     # ---------------------------------------------------------------------
     # Test josn_modify/access_by_path and json_find_pattern
 
-    pattern_val = [["addreSS$2#oncliCk$1", "A"], ["address$1#onclick$", "B"], ["id", 1],
-                   ["$menuitem$address$2#onclick$0#", 1337]]
+    pattern_val = [["addreSS$2#oncliCk$1", "'A'", "A"], ["address$1#onclick$", "'B'", 'B'], ["id", "1", 1],
+                   ["$menuitem$address$2#onclick$0#", 1337, 1337]]
     for e in pattern_val:
         json_modify_by_path(data, json_find_by_pattern(data, e[0]), e[1])
-        assert e[1] == json_access_by_path(data, json_find_by_pattern(data, e[0]))
+        assert e[2] == json_access_by_path(data, json_find_by_pattern(data, e[0]))
 
-    pattern_val = [["title", "A"], ["ENTRY$glosss", "B"], ["$SORTAS", 1],
-                   ["also$1#", 1337]]
+    pattern_val = [["title", "'A'", "A"], ["ENTRY$glosss", "'B'", 'B'], ["$SORTAS", 1, 1],
+                   ["also$1#", 1337, 1337]]
     for e in pattern_val:
         json_modify_by_path(data2, json_find_by_pattern(data2, e[0]), e[1])
-        assert e[1] == json_access_by_path(data2, json_find_by_pattern(data2, e[0]))
+        assert e[2] == json_access_by_path(data2, json_find_by_pattern(data2, e[0]))
 
     assert json_access_by_path(data, "xxxxxxxxx") is None
     assert not json_modify_by_path(data, "xxxxxxxxx", "1")
@@ -519,78 +547,78 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_key_value_compare
 
-    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 ["A", "12", 1337]),
-               jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$3#", True,
+               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$3#", True,
                                 ["A", 4, 1337]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", "12", 1])]
+               js.Json_Key_Val("id", True, ["cane", "example", "12", 1])]
 
     assert json_key_value_exists(data, key_val)
 
-    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 ["A", 1337, "12"]),
-               jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$2#", True,
+               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$2#", True,
                                 ["A", 87878, 3, 1337]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", "12", "file"])]
+               js.Json_Key_Val("id", True, ["cane", "example", "12", "file"])]
 
     assert not json_key_value_exists(data, key_val)
 
-    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 [1, 1, "A", 1337]),
-               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert json_key_value_exists(data, key_val)
 
-    key_val = [jkv.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
-               jkv.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+    key_val = [js.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
+               js.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert not json_key_value_exists(data, key_val)
 
-    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 [1, 1, "A", 1337]),
-               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
-               jkv.Json_Key_Val("id", False, ["cane", "example", 1, "file"])]
+               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("id", False, ["cane", "example", 1, "file"])]
 
     assert not json_key_value_exists(data, key_val)
 
     # ---------------------------------------------------------------------
     # Test json_key_exists
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("id", True)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("id", True)]
 
     assert json_key_exists(data, key)
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("id", True)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("id", True)]
 
     assert json_key_exists(data, key)
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("id", False)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("id", False)]
 
     assert not json_key_exists(data, key)
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("popup$menuitem$ADDRESS$0#", False)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("popup$menuitem$ADDRESS$0#", False)]
 
     assert json_key_exists(data, key)
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("adadadada", False)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("adadadada", False)]
 
     assert not json_key_exists(data, key)
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("adadadada", True)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("adadadada", True)]
 
     assert not json_key_exists(data, key)
 
@@ -599,90 +627,90 @@ def test():
 
     assert json_key_keyval_exists(data)
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("id", False)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("id", False)]
 
     assert not json_key_keyval_exists(data, keys=key)
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("id", True)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("id", True)]
 
     assert json_key_keyval_exists(data, keys=key)
 
-    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 [1, 1, "A", 1337]),
-               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert json_key_keyval_exists(data, keys_val=key_val)
 
-    key_val = [jkv.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
-               jkv.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+    key_val = [js.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
+               js.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert not json_key_keyval_exists(data, keys_val=key_val)
 
-    key_val = [jkv.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
-               jkv.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+    key_val = [js.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
+               js.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("id", True)]
-
-    assert not json_key_keyval_exists(data, keys_val=key_val, keys=key)
-
-    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
-                                [1, 1, "A", 1337]),
-               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
-
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("id", False)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("id", True)]
 
     assert not json_key_keyval_exists(data, keys_val=key_val, keys=key)
 
-    key_val = [jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 [1, 1, "A", 1337]),
-               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
-    key = [jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           jk.Json_Key("id", True)]
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("id", False)]
+
+    assert not json_key_keyval_exists(data, keys_val=key_val, keys=key)
+
+    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+                                [1, 1, "A", 1337]),
+               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+
+    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+           js.Json_Key("id", True)]
 
     assert json_key_keyval_exists(data, keys_val=key_val, keys=key)
 
     # ---------------------------------------------------------------------
     # Test json_key_value_exists_delete
 
-    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
                                 [1, "lol", "no", "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 77]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("id", True, [1, "lol", "no", "id", 77]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
 
     json_key_value_exists_delete(data2, key_val)
 
     assert len(key_val) == 1
 
-    key_val = [jkv.Json_Key_Val("notexisting", True,
+    key_val = [js.Json_Key_Val("notexisting", True,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", False, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("notexisting", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("id", False, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("notexisting", True, [1, "lol", "no", 1337, 2])]
 
     json_key_value_exists_delete(data2, key_val)
 
     assert len(key_val) == 3
 
-    key_val = [jkv.Json_Key_Val("aaaaaaaaaaa", False,
+    key_val = [js.Json_Key_Val("aaaaaaaaaaa", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
 
     json_key_value_exists_delete(data2, key_val)
 
@@ -691,20 +719,20 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_key_exists_delete
 
-    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
-            jk.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
+            js.Json_Key("also$1#", True)]
 
     json_key_exists_delete(data2, keys)
 
     assert len(keys) == 0
 
-    keys = [jk.Json_Key("notexisting", True), jk.Json_Key("id", False), jk.Json_Key("notexisting", True)]
+    keys = [js.Json_Key("notexisting", True), js.Json_Key("id", False), js.Json_Key("notexisting", True)]
 
     json_key_exists_delete(data2, keys)
 
     assert len(keys) == 3
 
-    keys = [jk.Json_Key("aaaaaaaaaaa", False), jk.Json_Key("id", True), jk.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("aaaaaaaaaaa", False), js.Json_Key("id", True), js.Json_Key("also$1#", True)]
 
     json_key_exists_delete(data2, keys)
 
@@ -714,146 +742,180 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_multiple_key_keyval_exists
 
-    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
 
     assert json_multiple_key_keyval_exists([data2], keys_val=key_val)
 
 
-    key_val = [jkv.Json_Key_Val("notexisting", True,
+    key_val = [js.Json_Key_Val("notexisting", True,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", False, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("notexisting", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("id", False, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("notexisting", True, [1, "lol", "no", 1337, 2])]
 
     assert not json_multiple_key_keyval_exists([data2], keys_val=key_val)
 
 
 
-    key_val = [jkv.Json_Key_Val("aaaaaaaaaaa", False,
+    key_val = [js.Json_Key_Val("aaaaaaaaaaa", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
 
     assert not json_multiple_key_keyval_exists([data2], keys_val=key_val)
 
 
-    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
-            jk.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
+            js.Json_Key("also$1#", True)]
 
     assert json_multiple_key_keyval_exists([data2], keys=keys)
 
-    keys = [jk.Json_Key("notexisting", True), jk.Json_Key("id", False), jk.Json_Key("notexisting", True)]
+    keys = [js.Json_Key("notexisting", True), js.Json_Key("id", False), js.Json_Key("notexisting", True)]
 
     assert not json_multiple_key_keyval_exists([data2], keys=keys)
 
-    keys = [jk.Json_Key("aaaaaaaaaaa", False), jk.Json_Key("id", True), jk.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("aaaaaaaaaaa", False), js.Json_Key("id", True), js.Json_Key("also$1#", True)]
 
     assert not json_multiple_key_keyval_exists([data2], keys=keys)
 
 
-    keys = [jk.Json_Key("aaaaaaaaaaa", False), jk.Json_Key("id", True), jk.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("aaaaaaaaaaa", False), js.Json_Key("id", True), js.Json_Key("also$1#", True)]
 
-    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
 
     assert not json_multiple_key_keyval_exists([data2], keys=keys, keys_val=key_val)
 
-    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
-            jk.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
+            js.Json_Key("also$1#", True)]
 
-    key_val = [jkv.Json_Key_Val("aaaaaaaaaaa", False,
+    key_val = [js.Json_Key_Val("aaaaaaaaaaa", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
 
     assert not json_multiple_key_keyval_exists([data2], keys=keys, keys_val=key_val)
 
-    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
-            jk.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
+            js.Json_Key("also$1#", True)]
 
-    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
 
     assert json_multiple_key_keyval_exists([data2], keys=keys, keys_val=key_val)
 
 
-    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
-            jk.Json_Key("also$1#", True),
+    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
+            js.Json_Key("also$1#", True),
 
-            jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-            jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-            jk.Json_Key("popup$menuitem$ADDRESS$0#", False)]
+            js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+            js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+            js.Json_Key("popup$menuitem$ADDRESS$0#", False)]
 
-    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
+               js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
 
-               jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 [1, 1, "A", 1337]),
-               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
     assert len(keys) > 0 and len(key_val) > 0
 
-    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
-            jk.Json_Key("also$1#", True),
+    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
+            js.Json_Key("also$1#", True),
 
-            jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-            jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-            jk.Json_Key("popup$meaaaaaa", False)]
+            js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+            js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+            js.Json_Key("popup$meaaaaaa", False)]
 
-    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
+               js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
 
-               jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 [1, 1, "A", 1337]),
-               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert not json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
 
-    keys = [jk.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), jk.Json_Key("id", True),
-            jk.Json_Key("also$1#", True),
+    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
+            js.Json_Key("also$1#", True),
 
-            jk.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-            jk.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-            jk.Json_Key("popup$menuitem$ADDRESS$0#", False)]
+            js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
+            js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+            js.Json_Key("popup$menuitem$ADDRESS$0#", False)]
 
-    key_val = [jkv.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
-               jkv.Json_Key_Val("id", True, [2, "lol", "no", "id", 3333]),
-               jkv.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
+               js.Json_Key_Val("id", True, [2, "lol", "no", "id", 3333]),
+               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
 
-               jkv.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
                                 [1, 1, "A", 1337]),
-               jkv.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 66666]),
-               jkv.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
+               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 66666]),
+               js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert not json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
+
+
+    # ---------------------------------------------------------------------
+    # Test json_inject_value
+
+    inject = js.Json_Write(path="ADDRESS$0#VALUE", new_val="'NUOVO_VALORE'")
+    assert json_inject_value(data, inject)
+    assert "NUOVO_VALORE" == json_access_by_path(data, json_find_by_pattern(data, "ADDRESS$0#VALUE"))
+
+    inject = js.Json_Write(path="non_existing", new_val="'val123'")
+    assert not json_inject_value(data, inject)
+    assert not "val123" == json_access_by_path(data, json_find_by_pattern(data, "non_existing"))
+
+    inject = js.Json_Write(index=25, new_val="'iliade'")
+    assert json_inject_value(data, inject)
+    assert "iliade" == json_access_by_index(data, 25)
+
+    inject = js.Json_Write(index=256, new_val="'odissea'")
+    assert not json_inject_value(data, inject)
+    assert not "odissea" == json_access_by_index(data, 256)
+
+    inject = js.Json_Write(index=0, new_val="val + 12000")
+    assert json_inject_value(data, inject)
+    assert 12001 == json_access_by_index(data, 0)
+
+    inject = js.Json_Write(index=1, new_val=True)
+    assert json_inject_value(data, inject)
+    assert json_access_by_index(data, 1)
+
+
 
     print("------------------------------------------------------------")
     json_parse(data)
     json_parse(data2)
     print("------------------------------------------------------------")
+
+    # To export as json
+    print(json.dumps(data))
+    print(json.dumps(data2))
 
 
 if __name__ == '__main__':
