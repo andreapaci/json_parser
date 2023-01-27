@@ -51,7 +51,7 @@ def json_modify_by_index(data, index: int, new_val, lst: list[int] = None):
     return False
 
 
-def json_access_by_index(data, index: int, lst : list[int] = None):
+def json_access_by_index(data, index: int, lst: list[int] = None):
     """
     json_access_by_index access the json key with index and returns its value.
 
@@ -102,7 +102,7 @@ def json_modify_by_path(data, path: str, new_val, index=None):
         return True
     dict_pos = path.find(container_char_dict)
     list_pos = path.find(container_char_list)
-    if (0 < dict_pos < list_pos and list_pos > 0) or (list_pos < 0 and dict_pos > 0):
+    if (0 < dict_pos < list_pos and list_pos > 0) or (list_pos < 0 < dict_pos):
         tokens = path.split(container_char_dict, 1)
         if index is None:
             if tokens[0] not in data:
@@ -112,7 +112,7 @@ def json_modify_by_path(data, path: str, new_val, index=None):
             if tokens[0] not in data[index]:
                 return False
             return json_modify_by_path(data[index], tokens[1], new_val, index=tokens[0])
-    if (0 < list_pos < dict_pos and dict_pos > 0) or (dict_pos < 0 and list_pos > 0):
+    if (0 < list_pos < dict_pos and dict_pos > 0) or (dict_pos < 0 < list_pos):
         tokens = path.split(container_char_list, 1)
         if index is None:
             if int(tokens[0]) >= len(data):
@@ -139,12 +139,12 @@ def json_access_by_path(data, path: str):
         return data
     dict_pos = path.find(container_char_dict)
     list_pos = path.find(container_char_list)
-    if (0 < dict_pos < list_pos and list_pos > 0) or (list_pos < 0 and dict_pos > 0):
+    if (0 < dict_pos < list_pos and list_pos > 0) or (list_pos < 0 < dict_pos):
         tokens = path.split(container_char_dict, 1)
         if tokens[0] not in data:
             return None
         return json_access_by_path(data[tokens[0]], tokens[1])
-    if (0 < list_pos < dict_pos and dict_pos > 0) or (dict_pos < 0 and list_pos > 0):
+    if (0 < list_pos < dict_pos and dict_pos > 0) or (dict_pos < 0 < list_pos):
         tokens = path.split(container_char_list, 1)
         if int(tokens[0]) >= len(data):
             return None
@@ -400,63 +400,66 @@ def json_inject_value(data, inject: js.Json_Write):
 
 def json_parse(data, print_index: bool = False, print_path: bool = False, indent: int = 0, lst: list[int] = None, path: str = ""):
     """
-    json_parse parses a json struct and prints it as json. Can print extra info
+    json_parse parses a json struct and returns it as json string. Can print extra info
 
     :param data: json data struct
     :param print_index: Default False. Prints the index of each element
     :param print_path: Default False. Prints the path
+    :return the string of the parsing
     """
+    output = ""
     if lst is None:
         lst = [0]
     if isinstance(data, dict):
         for (k, v) in data.items():
             new_path = path + k + container_char_dict
-            print(indent_char * indent, "\"" + str(k) + "\"", ":", end='', sep='')
+            output += indent_char * indent + "\"" + str(k) + "\"" + ":"
             if isinstance(v, dict):
-                print("{")
-                json_parse(v, print_index=print_index, print_path=print_path, indent=indent + 1, lst=lst, path=new_path)
-                print(indent_char * indent, "},", sep='')
+                output += "{\n"
+                output += json_parse(v, print_index=print_index, print_path=print_path, indent=indent + 1, lst=lst, path=new_path)
+                output += indent_char * indent + "},\n"
             elif isinstance(v, list):
-                print("[")
-                json_parse(v, print_index=print_index, print_path=print_path, indent=indent + 1, lst=lst, path=new_path)
-                print(indent_char * indent, "],", sep='')
+                output += "[\n"
+                output += json_parse(v, print_index=print_index, print_path=print_path, indent=indent + 1, lst=lst, path=new_path)
+                output += indent_char * indent + "],\n"
             else:
                 if isinstance(v, str):
-                    print("\"" + str(v) + "\",", end=' ')
+                    output += "\"" + str(v) + "\", "
                 else:
-                    print(str(v) + ",", end=' ')
+                    output += str(v) + ", "
                 if print_index:
-                    print("(" + str(lst[0]) + ")", end=' ')
+                    output += "(" + str(lst[0]) + ") "
                 if print_path:
-                    print(new_path, end='')
-                print('')
+                    output += new_path
+                output += "\n"
                 lst[0] = lst[0] + 1
     elif isinstance(data, list):
         for i in range(0, len(data)):
             new_path = path + str(i) + container_char_list
             if isinstance(data[i], dict):
-                print(indent_char * indent, "{", sep='')
-                json_parse(data[i], print_index=print_index, print_path=print_path, indent=indent + 1, lst=lst,
+                output += indent_char * indent + "{\n"
+                output += json_parse(data[i], print_index=print_index, print_path=print_path, indent=indent + 1, lst=lst,
                            path=new_path)
-                print(indent_char * indent, "},", sep='')
+                output += indent_char * indent + "},\n"
             elif isinstance(data[i], list):
-                print(indent_char * indent, "[", sep='')
-                json_parse(data[i], print_index=print_index, print_path=print_path, indent=indent + 1, lst=lst,
+                output += indent_char * indent + "[\n"
+                output += json_parse(data[i], print_index=print_index, print_path=print_path, indent=indent + 1, lst=lst,
                            path=new_path)
-                print(indent_char * indent, "],", sep='')
+                output += indent_char * indent + "],\n"
             else:
                 if isinstance(data[i], str):
-                    print(indent_char * indent + "\"" + str(data[i]) + "\",", end=' ')
+                    output += indent_char * indent + "\"" + str(data[i]) + "\", "
                 else:
-                    print(indent_char * indent + str(data[i]) + ",", end=' ')
+                    output += indent_char * indent + str(data[i]) + ", "
                 if print_index:
-                    print("(" + str(lst[0]) + ")", end=' ')
+                    output += "(" + str(lst[0]) + ") "
                 if print_path:
-                    print(new_path, end='')
-                print('')
+                    output += new_path
+                output += "\n"
                 lst[0] = lst[0] + 1
     else:
         raise Exception("Json decoding went wrong!")
+    return output
 
 
 def test():
@@ -471,15 +474,15 @@ def test():
     # Test json_parse with index and path enabled/disabled
 
     print("------------------------------------------------------------")
-    json_parse(data)
-    json_parse(data, print_index=True)
-    json_parse(data, print_path=True)
-    json_parse(data, print_index=True, print_path=True)
+    print(json_parse(data))
+    print(json_parse(data, print_index=True))
+    print(json_parse(data, print_path=True))
+    print(json_parse(data, print_index=True, print_path=True))
 
-    json_parse(data2)
-    json_parse(data2, print_index=True)
-    json_parse(data2, print_path=True)
-    json_parse(data2, print_index=True, print_path=True)
+    print(json_parse(data2))
+    print(json_parse(data2, print_index=True))
+    print(json_parse(data2, print_path=True))
+    print(json_parse(data2, print_index=True, print_path=True))
     print("------------------------------------------------------------")
 
     # ---------------------------------------------------------------------
@@ -909,8 +912,8 @@ def test():
 
 
     print("------------------------------------------------------------")
-    json_parse(data)
-    json_parse(data2)
+    print(json_parse(data))
+    print(json_parse(data2))
     print("------------------------------------------------------------")
 
     # To export as json
