@@ -184,6 +184,40 @@ def json_find_by_pattern(data, pattern: str, path: str = ""):
         raise Exception("Json decoding went wrong!")
     return None
 
+def json_find_all_by_patterns(data, patterns: list[str], path: str = "", lst: list[str] = None):
+    """
+    json_access_all_by_patterns returns all the paths contains one of the patter specified in "patterns". Case-insensitive.
+
+    :param data: json data struct
+    :param patterns: list of patterns to be found/completed
+    :return: list all the paths
+    """
+    if lst is None:
+        lst = []
+    if isinstance(data, dict):
+        for (k, v) in data.items():
+            new_path = path + k + container_char_dict
+            if isinstance(v, dict) or isinstance(v, list):
+                lst = json_find_all_by_patterns(v, patterns, lst=lst, path=new_path)
+            else:
+                for p in patterns:
+                    if p.lower() in new_path.lower():
+                        if new_path not in lst:
+                            lst.append(new_path)
+    elif isinstance(data, list):
+        for i in range(0, len(data)):
+            new_path = path + str(i) + container_char_list
+            if isinstance(data[i], dict) or isinstance(data[i], list):
+                lst = json_find_all_by_patterns(data[i], patterns, lst=lst, path=new_path)
+            else:
+                for p in patterns:
+                    if p.lower() in new_path.lower():
+                        if new_path not in lst:
+                            lst.append(new_path)
+    else:
+        raise Exception("Json decoding went wrong!")
+    return lst
+
 
 def search_elem_in_keys(e: str, keys: list[str], lst: list[bool]):
     """
@@ -909,7 +943,10 @@ def test():
     assert json_inject_value(data, inject)
     assert json_access_by_index(data, 1)
 
+    # ---------------------------------------------------------------------
+    # Test json_find_all_by_patterns
 
+    print(json_find_all_by_patterns(data, ["d", "I"]))
 
     print("------------------------------------------------------------")
     print(json_parse(data))
