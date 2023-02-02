@@ -947,6 +947,9 @@ def test():
     # Test json_find_all_by_patterns
 
     print(json_find_all_by_patterns(data, ["d", "I"]))
+    print(json_find_all_by_patterns(data, ["id", "ID"]))
+    print(json_find_all_by_patterns(data, ["id"]))
+    print(json_find_all_by_patterns(data, ["menuitem", "1#", "4#", "address", "value"]))
 
     print("------------------------------------------------------------")
     print(json_parse(data))
