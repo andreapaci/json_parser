@@ -283,6 +283,8 @@ def json_key_value_exists(data, key_value: list[js.Json_Key_Val]):
             if key is None:
                 return False
         val = json_access_by_path(data, key)
+        if val is None:
+            return False
         res = False
         for v in kv.val:
             res = res or val == v
@@ -307,8 +309,9 @@ def json_key_value_exists_delete(data, key_value: list[js.Json_Key_Val]):
             if key is None:
                 continue
         val = json_access_by_path(data, key)
+        if val is None:
+            continue
         res = False
-
         for v in kv.val:
             res = res or val == v
         if res:
@@ -338,7 +341,7 @@ def json_key_exists(data, keys: list[js.Json_Key]):
         else:
             full_keys.append(k.key)
     for e in full_keys:
-        if not json_access_by_path(data, e):
+        if json_access_by_path(data, e) is None:
             return False
     return True
 
@@ -356,10 +359,10 @@ def json_key_exists_delete(data, keys: list[js.Json_Key]):
             ret = json_find_by_pattern(data, k.key)
             if ret is None:
                 continue
-            if json_access_by_path(data, ret):
+            if json_access_by_path(data, ret) is not None:
                 dump.append(k)
         else:
-            if json_access_by_path(data, k.key):
+            if json_access_by_path(data, k.key) is not None:
                 dump.append(k)
 
     for d in dump:
