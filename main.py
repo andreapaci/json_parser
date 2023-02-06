@@ -180,9 +180,8 @@ def json_find_by_pattern(data, pattern: str, path: str = ""):
             else:
                 if pattern.lower() in new_path.lower():
                     return new_path
-    else:
-        raise Exception("Json decoding went wrong!")
     return None
+
 
 def json_find_all_by_patterns(data, patterns: list[str], path: str = "", lst: list[str] = None):
     """
