@@ -1,10 +1,11 @@
 import json
+import re
 import json_struct as js
 
-jsonString = '{"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": {"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": "Close", "onclick": "CloseDoc()"}], "onclick": "OpenDoc()"},{"value": "Close", "onclick": [1,"2",3,4,{"value": "New", "onclick": "CreateNewDoc()"}]}]}}}}]}]}}}'
+jsonString = '{"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "address": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": {"id": "file","value": "File","popup":{"menuitem": { "ADDRESS":[{"value": "New", "onclick": "CreateNewDoc()"}, {"value": [{"value": "New", "onclick": "CreateNewDoc()"}, {"value": "Open", "onclick": "OpenDoc()"},{"value": "Close", "onclick": "CloseDoc()"}], "onclick": "OpenDoc()"},{"value": "Close", "onclick": [1,"2",3,4,{"value": "New", "onclick": "CreateNewDoc()"}]}]}}}}]}]}}}'
 jsonString2 = '{"glossary": {"title": "example glossary","GlossDiv": {"title": "S","GlossList": {"GlossEntry": {"ID": "SGML","SortAs": "SGML","GlossTerm": "Standard Generalized Markup Language","Acronym": "SGML","Abbrev": "ISO 8879:1986","GlossDef": {"para": "A meta-markup language, used to create markup languages such as DocBook.","GlossSeeAlso": ["GML", "XML"]},"GlossSee": "markup"}}}}}'
 indent_char = '  '
-container_char_dict = '$'
+container_char_dict = '%'
 container_char_list = '#'
 
 
@@ -91,7 +92,7 @@ def json_modify_by_path(data, path: str, new_val, index=None):
     json_modify_by_path modify a json value using a path.
 
     :param data: json data struct
-    :param path: the path specified as: key1$key2$list_index1#key3$list_index2#
+    :param path: the path specified as: key1%key2%list_index1#key3%list_index2#
     :param new_val: value to be written
     :return: True if the value has been accessed and written, False otherwise
     """
@@ -130,7 +131,7 @@ def json_access_by_path(data, path: str):
     json_access_by_path return a json value using a path.
 
     :param data: json data struct
-    :param path: the path specified as: key1$key2$list_index1#key3$list_index2#
+    :param path: the path specified as: key1%key2%list_index1#key3%list_index2#
     :return: the value accessed if found, None otherwise
     """
     if path is None:
@@ -155,6 +156,7 @@ def json_access_by_path(data, path: str):
 def json_find_by_pattern(data, pattern: str, path: str = ""):
     """
     json_find_by_pattern find the path from a given pattern. Case-insensitive.
+    Support regex as pattern.
 
     :param data: json data struct
     :param pattern: the pattern to be found/completed
@@ -168,7 +170,7 @@ def json_find_by_pattern(data, pattern: str, path: str = ""):
                 if ret is not None:
                     return ret
             else:
-                if pattern.lower() in new_path.lower():
+                if re.search(pattern.lower(), new_path.lower()) is not None:
                     return new_path
     elif isinstance(data, list):
         for i in range(0, len(data)):
@@ -178,14 +180,15 @@ def json_find_by_pattern(data, pattern: str, path: str = ""):
                 if ret is not None:
                     return ret
             else:
-                if pattern.lower() in new_path.lower():
+                if re.search(pattern.lower(), new_path.lower()) is not None:
                     return new_path
     return None
 
 
 def json_find_all_by_patterns(data, patterns: list[str], path: str = "", lst: list[str] = None):
     """
-    json_access_all_by_patterns returns all the paths contains one of the patter specified in "patterns". Case-insensitive.
+    json_access_all_by_patterns returns all the paths contains one of the patter specified in "patterns".
+    Case-insensitive. Support regex as pattern.
 
     :param data: json data struct
     :param patterns: list of patterns to be found/completed
@@ -200,7 +203,7 @@ def json_find_all_by_patterns(data, patterns: list[str], path: str = "", lst: li
                 lst = json_find_all_by_patterns(v, patterns, lst=lst, path=new_path)
             else:
                 for p in patterns:
-                    if p.lower() in new_path.lower():
+                    if re.search(p.lower(), new_path.lower()) is not None:
                         if new_path not in lst:
                             lst.append(new_path)
     elif isinstance(data, list):
@@ -210,7 +213,7 @@ def json_find_all_by_patterns(data, patterns: list[str], path: str = "", lst: li
                 lst = json_find_all_by_patterns(data[i], patterns, lst=lst, path=new_path)
             else:
                 for p in patterns:
-                    if p.lower() in new_path.lower():
+                    if re.search(p.lower(), new_path.lower()) is not None:
                         if new_path not in lst:
                             lst.append(new_path)
     else:
@@ -541,14 +544,14 @@ def test():
     # ---------------------------------------------------------------------
     # Test josn_modify/access_by_path and json_find_pattern
 
-    pattern_val = [["addreSS$2#oncliCk$1", "'A'", "A"], ["address$1#onclick$", "'B'", 'B'], ["id", "1", 1],
-                   ["$menuitem$address$2#onclick$0#", 1337, 1337]]
+    pattern_val = [["addreSS%2#oncliCk%1", "'A'", "A"], ["address%1#onclick%", "'B'", 'B'], ["id", "1", 1],
+                   ["%menuitem%address%2#onclick%0#", 1337, 1337], ["popup%menuitem%address.*addre.*oncliCk%1", "'A'", "A"]]
     for e in pattern_val:
         json_modify_by_path(data, json_find_by_pattern(data, e[0]), e[1])
         assert e[2] == json_access_by_path(data, json_find_by_pattern(data, e[0]))
 
-    pattern_val = [["title", "'A'", "A"], ["ENTRY$glosss", "'B'", 'B'], ["$SORTAS", 1, 1],
-                   ["also$1#", 1337, 1337]]
+    pattern_val = [["title", "'A'", "A"], ["ENTRY%glosss", "'B'", 'B'], ["%SORTAS", 1, 1],
+                   ["also%1#", 1337, 1337], ["entry.*def%.*seeALSO%0", '8', 8]]
     for e in pattern_val:
         json_modify_by_path(data2, json_find_by_pattern(data2, e[0]), e[1])
         assert e[2] == json_access_by_path(data2, json_find_by_pattern(data2, e[0]))
@@ -563,7 +566,7 @@ def test():
 
     assert json_find_by_pattern(data2, "xxxxxxxxxxxxxxx") is None
 
-    assert isinstance(json_access_by_path(data, "popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$"), list)
+    assert isinstance(json_access_by_path(data, "popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%"), list)
 
 
     # ---------------------------------------------------------------------
@@ -586,38 +589,38 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_key_value_compare
 
-    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 ["A", "12", 1337]),
-               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$3#", True,
+               js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%3#", True,
                                 ["A", 4, 1337]),
                js.Json_Key_Val("id", True, ["cane", "example", "12", 1])]
 
     assert json_key_value_exists(data, key_val)
 
-    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 ["A", 1337, "12"]),
-               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$2#", True,
+               js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%2#", True,
                                 ["A", 87878, 3, 1337]),
                js.Json_Key_Val("id", True, ["cane", "example", "12", "file"])]
 
     assert not json_key_value_exists(data, key_val)
 
-    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 [1, 1, "A", 1337]),
-               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("menuitem%ADDRESS%2#onclick%0#", True, ["A", 87878, 1337]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert json_key_value_exists(data, key_val)
 
-    key_val = [js.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
+    key_val = [js.Json_Key_Val("address%0#value%", True, [2, "12", "New"]),
                js.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert not json_key_value_exists(data, key_val)
 
-    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 [1, 1, "A", 1337]),
-               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("menuitem%ADDRESS%2#onclick%0#", True, ["A", 87878, 1337]),
                js.Json_Key_Val("id", False, ["cane", "example", 1, "file"])]
 
     assert not json_key_value_exists(data, key_val)
@@ -625,38 +628,38 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_key_exists
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("id", True)]
 
     assert json_key_exists(data, key)
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", True),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("id", True)]
 
     assert json_key_exists(data, key)
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("id", False)]
 
     assert not json_key_exists(data, key)
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-           js.Json_Key("popup$menuitem$ADDRESS$0#", False)]
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
+           js.Json_Key("popup%menuitem%ADDRESS%0#", False)]
 
     assert json_key_exists(data, key)
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("adadadada", False)]
 
     assert not json_key_exists(data, key)
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("adadadada", True)]
 
     assert not json_key_exists(data, key)
@@ -666,59 +669,59 @@ def test():
 
     assert json_key_keyval_exists(data)
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("id", False)]
 
     assert not json_key_keyval_exists(data, keys=key)
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", True),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("id", True)]
 
     assert json_key_keyval_exists(data, keys=key)
 
-    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 [1, 1, "A", 1337]),
-               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("menuitem%ADDRESS%2#onclick%0#", True, ["A", 87878, 1337]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert json_key_keyval_exists(data, keys_val=key_val)
 
-    key_val = [js.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
+    key_val = [js.Json_Key_Val("address%0#value%", True, [2, "12", "New"]),
                js.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert not json_key_keyval_exists(data, keys_val=key_val)
 
-    key_val = [js.Json_Key_Val("address$0#value$", True, [2, "12", "New"]),
+    key_val = [js.Json_Key_Val("address%0#value%", True, [2, "12", "New"]),
                js.Json_Key_Val("dsadasdsdsa#dsadsadsa#", True, ["A", 87878]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", True),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", True),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("id", True)]
 
     assert not json_key_keyval_exists(data, keys_val=key_val, keys=key)
 
-    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 [1, 1, "A", 1337]),
-               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("menuitem%ADDRESS%2#onclick%0#", True, ["A", 87878, 1337]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("id", False)]
 
     assert not json_key_keyval_exists(data, keys_val=key_val, keys=key)
 
-    key_val = [js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+    key_val = [js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 [1, 1, "A", 1337]),
-               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("menuitem%ADDRESS%2#onclick%0#", True, ["A", 87878, 1337]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
-    key = [js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-           js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
+    key = [js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+           js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
            js.Json_Key("id", True)]
 
     assert json_key_keyval_exists(data, keys_val=key_val, keys=key)
@@ -726,10 +729,10 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_key_value_exists_delete
 
-    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False,
                                 [1, "lol", "no", "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [1, "lol", "no", "id", 77]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2])]
 
     json_key_value_exists_delete(data2, key_val)
 
@@ -749,7 +752,7 @@ def test():
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2])]
 
     json_key_value_exists_delete(data2, key_val)
 
@@ -758,8 +761,8 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_key_exists_delete
 
-    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
-            js.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False), js.Json_Key("id", True),
+            js.Json_Key("also%1#", True)]
 
     json_key_exists_delete(data2, keys)
 
@@ -771,7 +774,7 @@ def test():
 
     assert len(keys) == 3
 
-    keys = [js.Json_Key("aaaaaaaaaaa", False), js.Json_Key("id", True), js.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("aaaaaaaaaaa", False), js.Json_Key("id", True), js.Json_Key("also%1#", True)]
 
     json_key_exists_delete(data2, keys)
 
@@ -781,11 +784,11 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_multiple_key_keyval_exists
 
-    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2])]
 
     assert json_multiple_key_keyval_exists([data2], keys_val=key_val)
 
@@ -804,13 +807,13 @@ def test():
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2])]
 
     assert not json_multiple_key_keyval_exists([data2], keys_val=key_val)
 
 
-    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
-            js.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False), js.Json_Key("id", True),
+            js.Json_Key("also%1#", True)]
 
     assert json_multiple_key_keyval_exists([data2], keys=keys)
 
@@ -818,101 +821,101 @@ def test():
 
     assert not json_multiple_key_keyval_exists([data2], keys=keys)
 
-    keys = [js.Json_Key("aaaaaaaaaaa", False), js.Json_Key("id", True), js.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("aaaaaaaaaaa", False), js.Json_Key("id", True), js.Json_Key("also%1#", True)]
 
     assert not json_multiple_key_keyval_exists([data2], keys=keys)
 
 
-    keys = [js.Json_Key("aaaaaaaaaaa", False), js.Json_Key("id", True), js.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("aaaaaaaaaaa", False), js.Json_Key("id", True), js.Json_Key("also%1#", True)]
 
-    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2])]
 
     assert not json_multiple_key_keyval_exists([data2], keys=keys, keys_val=key_val)
 
-    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
-            js.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False), js.Json_Key("id", True),
+            js.Json_Key("also%1#", True)]
 
     key_val = [js.Json_Key_Val("aaaaaaaaaaa", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2])]
 
     assert not json_multiple_key_keyval_exists([data2], keys=keys, keys_val=key_val)
 
-    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
-            js.Json_Key("also$1#", True)]
+    keys = [js.Json_Key("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False), js.Json_Key("id", True),
+            js.Json_Key("also%1#", True)]
 
-    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2])]
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2])]
 
     assert json_multiple_key_keyval_exists([data2], keys=keys, keys_val=key_val)
 
 
-    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
-            js.Json_Key("also$1#", True),
+    keys = [js.Json_Key("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False), js.Json_Key("id", True),
+            js.Json_Key("also%1#", True),
 
-            js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-            js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-            js.Json_Key("popup$menuitem$ADDRESS$0#", False)]
+            js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+            js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
+            js.Json_Key("popup%menuitem%ADDRESS%0#", False)]
 
-    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2]),
 
-               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+               js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 [1, 1, "A", 1337]),
-               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("menuitem%ADDRESS%2#onclick%0#", True, ["A", 87878, 1337]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
     assert len(keys) > 0 and len(key_val) > 0
 
-    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
-            js.Json_Key("also$1#", True),
+    keys = [js.Json_Key("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False), js.Json_Key("id", True),
+            js.Json_Key("also%1#", True),
 
-            js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-            js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-            js.Json_Key("popup$meaaaaaa", False)]
+            js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+            js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
+            js.Json_Key("popup%meaaaaaa", False)]
 
-    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [1, "lol", "no", "id", 2]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2]),
 
-               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+               js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 [1, 1, "A", 1337]),
-               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 1337]),
+               js.Json_Key_Val("menuitem%ADDRESS%2#onclick%0#", True, ["A", 87878, 1337]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert not json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
 
-    keys = [js.Json_Key("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False), js.Json_Key("id", True),
-            js.Json_Key("also$1#", True),
+    keys = [js.Json_Key("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False), js.Json_Key("id", True),
+            js.Json_Key("also%1#", True),
 
-            js.Json_Key("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False),
-            js.Json_Key("menuitem$ADDRESS$2#onclick$0#", True),
-            js.Json_Key("popup$menuitem$ADDRESS$0#", False)]
+            js.Json_Key("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False),
+            js.Json_Key("menuitem%ADDRESS%2#onclick%0#", True),
+            js.Json_Key("popup%menuitem%ADDRESS%0#", False)]
 
-    key_val = [js.Json_Key_Val("glossary$GlossDiv$GlossList$GlossEntry$GlossDef$para$", False,
+    key_val = [js.Json_Key_Val("glossary%GlossDiv%GlossList%GlossEntry%GlossDef%para%", False,
                                 [1, "lol", "no",
                                  "A meta-markup language, used to create markup languages such as DocBook."]),
                js.Json_Key_Val("id", True, [2, "lol", "no", "id", 3333]),
-               js.Json_Key_Val("also$1#", True, [1, "lol", "no", 1337, 2]),
+               js.Json_Key_Val("also%1#", True, [1, "lol", "no", 1337, 2]),
 
-               js.Json_Key_Val("popup$menuitem$ADDRESS$1#value$2#value$popup$menuitem$ADDRESS$2#onclick$0#", False,
+               js.Json_Key_Val("popup%menuitem%ADDRESS%1#value%2#value%popup%menuitem%ADDRESS%2#onclick%0#", False,
                                 [1, 1, "A", 1337]),
-               js.Json_Key_Val("menuitem$ADDRESS$2#onclick$0#", True, ["A", 87878, 66666]),
+               js.Json_Key_Val("menuitem%ADDRESS%2#onclick%0#", True, ["A", 87878, 66666]),
                js.Json_Key_Val("id", True, ["cane", "example", 1, "file"])]
 
     assert not json_multiple_key_keyval_exists([data, data2], keys=keys, keys_val=key_val)
@@ -921,9 +924,9 @@ def test():
     # ---------------------------------------------------------------------
     # Test json_inject_value
 
-    inject = js.Json_Write(path="ADDRESS$0#VALUE", new_val="'NUOVO_VALORE'")
+    inject = js.Json_Write(path="ADDRESS%0#VALUE", new_val="'NUOVO_VALORE'")
     assert json_inject_value(data, inject)
-    assert "NUOVO_VALORE" == json_access_by_path(data, json_find_by_pattern(data, "ADDRESS$0#VALUE"))
+    assert "NUOVO_VALORE" == json_access_by_path(data, json_find_by_pattern(data, "ADDRESS%0#VALUE"))
 
     inject = js.Json_Write(path="non_existing", new_val="'val123'")
     assert not json_inject_value(data, inject)
@@ -952,6 +955,7 @@ def test():
     print(json_find_all_by_patterns(data, ["id", "ID"]))
     print(json_find_all_by_patterns(data, ["id"]))
     print(json_find_all_by_patterns(data, ["menuitem", "1#", "4#", "address", "value"]))
+    print(json_find_all_by_patterns(data, ["address%$"]))
 
     print("------------------------------------------------------------")
     print(json_parse(data))
